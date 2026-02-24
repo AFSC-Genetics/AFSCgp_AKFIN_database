@@ -1,0 +1,858 @@
+---
+title: "Building a curated Alaska Fisheries Science Center genetic sample repository to facilitate long-term use of molecular information for fisheries management"
+author: ""
+date: "11/29/2022"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Summary
+The Alaska Fisheries Science Center Genetics Program (AFSC GP) conducts 
+research on Pacific salmon, groundfish, and forage fish species to comply 
+with regional, national, and international agreements and treaties for 
+managing marine resources. Much of this work relies on the collection of
+samples, both fishery dependent and independent, to evaluate the existence 
+and extent of population genetic structure in a variety of species. 
+Currently, the genetics program manages a database of these samples, associated 
+collection information, and laboratory data in FileMaker software. Filemaker is 
+a relational database application with a graphical user interface. Recent 
+limitations with the current database highlight the need for better records 
+management. This project's primary goal is to work with the Alaska Fisheries 
+Information Network (AKFIN) to develop a database model and
+repository for AFSC GP's inventory of genetic samples. Additionally, a data 
+management and upload tool in Oracle APEX will be created to interface 
+with these data. These tables will be used for storing sample information 
+including species, tissue type, collection information, and laboratory processing
+data. Effective organization of these samples will aid in both the evaluation 
+of population genetic trends across a diverse array of taxa as well as 
+the development of molecular resources for fisheries
+management. This project would bring consistency to AFSC GP's records 
+management, as current salmon bycatch analyses rely heavily on AKFIN's database.
+
+## Description of the current database
+```{r RdInDat, eval=F, echo = T}
+FMdat <- readxl::read_xlsx("./ABL_dat/20260127_export.xlsx")
+
+FMupload <- readxl::read_xlsx("./ABL_dat/upload_template_fieldValidation.xlsx",
+                              sheet='Field_Descriptions',
+                              range='A1:B67',
+                              col_names=F)
+```
+
+```{r FieldDescip, eval=T, echo=F}
+FMupload %>%
+  rename('Field' = 1,
+         'Description' = 2) %>%
+  knitr::kable()%>%
+  kableExtra::kable_styling(full_width = F)
+
+```
+
+The current Filemaker database export (20260127) has a total of 68 fields.
+
+```{r Salmon, eval=F, echo = T}
+Salmon_Entries <- FMdat %>%
+  filter(grepl(pattern='Salmonidae',FamilyOLD) | grepl(pattern='King|king|Chinook|chinook|Pink|pink|Coho|coho|Chum|chum|salmon|Steelhead|steelhead',CommonNameOLD)|grepl(pattern='Oncorhynchus',GenusOLD)|grepl(pattern='Oncorhynchus',SpeciesNameOLD))
+  
+```
+
+There are 54,596 entries, of which 18,355 are salmon (33.6%). I am going to focus on 
+cleaning up the Salmon entries. 
+
+## Salmoniformes Entries
+
+```{r Genera, eval=T, echo=T}
+#Break into ind. species
+Salmon_Entries %>% 
+  select(GenusOLD) %>%
+  table()
+
+```
+
+```{r NonOncorhynchus, eval=T, echo=T}
+Salmon_Entries %>% 
+  filter(GenusOLD != 'Oncorhynchus') %>%
+  select(SpeciesNameOLD)%>%
+  table()
+
+```
+
+Paralithodes camtschaticus is king crab, Lamna ditropis is 
+a salmon shark, and Coregonus clupeaformis is lake whitefish which are Salmonidae... so
+we'll keep those. 
+
+```{r rm2Sp, eval=T, echo=F}
+Salmon_Entries <- Salmon_Entries %>%
+  filter(!SpeciesNameOLD %in% c('Lamna ditropis', 'Paralithodes camtschaticus'))
+```
+
+#### Common Names
+Now lets look at the common names. We can standardize these and then
+confirm that the genus and species names are correct. 
+
+```{r CommonNames, eval=T, echo=T}
+Salmon_Entries %>% 
+  select(CommonNameOLD)%>%
+  table()
+```
+
+That's unfortunate, looks like there are 5 entries for chinook salmon alone. 
+
+```{r StndrzCN, eval=T, echo=T}
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CommonNameOLDlc = tolower(CommonNameOLD))%>%
+  mutate(CommonName = recode(CommonNameOLDlc, 
+                'chinook' = 'Chinook salmon',
+                'king salmon' = 'Chinook salmon',
+                'chinook fin clip' = 'Chinook salmon',
+                'chinook (bycatch)' = 'Chinook salmon',
+                'chinook salmon' = 'Chinook salmon',
+                'chinook/king salmon' = 'Chinook salmon'))
+
+Salmon_Entries %>% 
+  select(CommonName)%>%
+  table()
+
+Salmon_Entries %>% nrow() == (Salmon_Entries %>% 
+                                select(CommonName)%>%
+                                  table() %>% sum())
+```
+
+Dang, some of the common names are abscent. Hopefully there is an entry in 
+the genus and species. 
+
+```{r NoCN, eval=T, echo=T}
+NoCommonNames <- Salmon_Entries %>%
+                   filter(is.na(CommonName))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CommonName = ifelse(grepl(pattern='CMGIS04|CMPEL93',AlternateID)&is.na(CommonName),'chum salmon', CommonName))
+
+```
+
+Nope, but at least they were ADFG collections. In the Silly code (Alt ID), 
+chum collections start with CM, king salmon with K, sockeye with S. So
+at least we know that these are chum salmon. 
+
+### Genus, Family, and Species
+Now that all the common names are filled in we can work with the genus name.
+
+```{r StndrzGenus, eval=T, echo=T}
+Salmon_Entries %>%
+  select(GenusOLD) %>%
+  table
+  
+#Damn very few of them are filled out.  
+
+Salmon_Entries <- Salmon_Entries %>%
+   mutate(Genus = ifelse(grepl(pattern='Chinook|pink|coho|chum|sockeye',CommonName),'Oncorhynchus',
+                               ifelse(grepl(pattern='lake whitefish',CommonName),'Coregonus',NA)))
+
+Salmon_Entries %>%
+  select(Genus) %>%
+  table
+```
+
+```{r StndrzFamily, eval=T, echo=T}
+Salmon_Entries %>%
+  select(FamilyOLD) %>%
+  table
+  
+Salmon_Entries %>% nrow() == (Salmon_Entries %>% 
+                                select(FamilyOLD)%>%
+                                  table() %>% sum())
+
+```
+
+```{r StndrzSpecies, eval=T, echo=T}
+Salmon_Entries %>%
+  select(SpeciesNameOLD) %>%
+  table
+  
+#It appears that in the Field_Values validation we don't
+#want the binomial latin name as species, just the species 
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Species = recode(SpeciesNameOLD, 
+                'Coregonus clupeaformis' = 'clupeaformis',
+                'Onchorhynchus gorbuscha' = 'gorbuscha',
+                'Onchorynchus tshawytscha' = 'tshawytscha',# Oncorhynchus misspelled
+                'Oncorhynchus kisutch' = 'kisutch',
+                'Oncorhynchus nerka' = 'nerka',
+                'Oncorhynchus tshawytscha' = 'tshawytscha'))
+
+Salmon_Entries %>%
+  select(Species) %>%
+  table
+
+NoSpeciesName <- Salmon_Entries %>%
+  filter(is.na(Species))
+
+NoSpeciesName %>%
+  select(CommonName) %>%
+  table()
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Species = ifelse((is.na(Species)&CommonName == "Chinook salmon"),'tshawytscha',Species))%>%
+  mutate(Species = ifelse(is.na(Species)&CommonName == "chum salmon",'keta',Species))%>%
+  mutate(Species = ifelse(is.na(Species)&CommonName == "coho salmon",'kisutch',Species))%>%
+  mutate(Species = ifelse(is.na(Species)&CommonName == "pink salmon",'gorbuscha',Species))%>%
+  mutate(Species = ifelse(is.na(Species)&CommonName == "sockeye salmon",'nerka',Species))%>%
+  mutate(Species = ifelse(is.na(Species)&CommonName == "lake whitefish",'clupeaformis',Species))
+  
+Salmon_Entries %>% nrow() == (Salmon_Entries %>% 
+                                select(Species)%>%
+                                  table() %>% sum())
+
+Salmon_Entries %>%
+  select(Species) %>%
+  table
+
+```
+
+Sweet, those look pretty good for species names. 
+
+### Contact, Donating Lab, Collector
+
+In the field descriptions 'Contact' is listed as a required field with 
+instructions about field validations; however there are values listed in
+the sheet. Additionally, contact is not listed in the 'ABLG-DB-working-copy'
+sheet for upload. So perhaps that field has been replaced with 
+'Collector' which has 69 unique values. 
+
+```{r StndrzCollector, eval=T, echo=T}
+Salmon_Entries %>%
+  select(Collector) %>%
+  table
+  
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Collector = recode(Collector,
+                            'LPW-Waters' = 'Charlie Waters',
+                            'Vulstek' = 'Scott Vulstek',
+                            'Mike-Courtney' = 'Michael Courtney'))%>%
+  mutate(Collector = ifelse(Collector=="---",NA,Collector))
+
+NoCollector <- Salmon_Entries %>%
+  filter(is.na(Collector)) 
+
+```
+
+There are 10,941 records without a collector recorded. Maybe that is fine provided
+we have a contact/donating lab for the sample. 
+
+Now take a stab at the Donating Lab
+
+```{r StndrzCollector, eval=T, echo=T}
+Salmon_Entries %>%
+  select(DonatingLab) %>%
+  table
+  
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = recode(DonatingLab,
+                            'LPW/Waters' = 'AFSC-LPW',
+                            'Little Port Walter' = 'AFSC-LPW',
+                            'Vulstek' = 'AFSC-Scott Vulstek',
+                            'Vulstek?' = 'AFSC-Scott Vulstek',
+                            'Seitz' = 'UAF-Andy Seitz',
+                            'Manhard Mol Bio 2018' = 'UAF-Anthony Gharrett'))%>%
+  mutate(DonatingLab = ifelse(DonatingLab=="---",NA,DonatingLab))
+
+Salmon_Entries %>%
+  select(DonatingLab) %>%
+  table
+
+sum(is.na(Salmon_Entries$DonatingLab))
+
+```
+
+```{r UnknwnRcd, eval=T, echo=T}
+BadRcrds <- Salmon_Entries %>%
+  filter(is.na(DonatingLab)&is.na(Collector))
+```
+
+What are the samples from 
+
+Sckye_2014_Tog_XX - Little Togiak Beach
+PL_XX - Sckye_LkWA2001
+11/7/00_CedarSockeye_XX - Sckye_Cedar_1999_2000
+Cedar_R_1999_ - 
+Sckye2001_Baker_
+
+BC22_25300_5006_des/env Chinook bycatch?
+
+MCGL_18_ - Coregonus clupeaformis? whitefish_01 plate; Jared Homola Molecular Conservation Genetics Lab
+
+DipacMale/FemaleCoho_2011; 
+
+```{r}
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = ifelse(is.na(DonatingLab) & CommonName == 'lake whitefish','MCGL-Jared Homola',DonatingLab))
+```
+
+
+
+#### Collection Year, Month, Day
+
+```{r Year, eval=T, echo=F}
+Salmon_Entries %>%
+  select(CollectionYear) %>%
+  unlist()%>%
+  table
+  
+NoYear <- Salmon_Entries %>%
+  filter(is.na(CollectionYear))
+```
+
+```{r Month, eval=T, echo=F}
+Salmon_Entries %>%
+  select(CollectionMonth) %>%
+  unlist()%>%
+  table
+ 
+Salmon_Entries %>%
+  filter(CollectionMonth == 'NA')
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CollectionMonth = ifelse(CollectionMonth=="NA",NA,CollectionMonth))
+
+NoMonth <- Salmon_Entries %>%
+  filter(is.na(CollectionMonth))
+```
+
+```{r Year, eval=T, echo=F}
+Salmon_Entries %>%
+  select(CollectionDay) %>%
+  unlist()%>%
+  table
+  
+ShitSamp <- Salmon_Entries %>%
+  filter(CollectionDay=='103') %>%
+  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+Salmon_Entries %>%
+  filter(ABLG %in% c(41646,41647,41648,41649,41650)) %>%
+  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+#Turns out that Little Whitefish should be 8/11
+Salmon_Entries %>%
+  filter(grepl(pattern='SLWHI11',AlternateID))%>%
+  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CollectionDay = ifelse(grepl(pattern='SLWHI11',AlternateID),'11',CollectionDay))
+  
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CollectionDay = recode(CollectionDay,
+                                '1' = '01',
+                                '2' = '02',
+                                '3' = '03',
+                                '4' = '04',
+                                '5' = '05',
+                                '6' = '06',
+                                '7' = '07',
+                                '8' = '08',
+                                '9' = '09'))
+
+Salmon_Entries %>%
+  select(CollectionDay) %>%
+  unlist()%>%
+  table
+```
+
+
+### Location
+
+```{r MR, eval=T, echo=F}
+Salmon_Entries %>%
+  select(MarineRegion) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(MarineRegion = ifelse(MarineRegion=="---",NA,MarineRegion))
+
+```
+
+```{r FWWS, eval=T, echo=F}
+Salmon_Entries %>%
+  select(FreshwaterWatershed) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(FreshwaterWatershed = ifelse(FreshwaterWatershed=="---",NA,FreshwaterWatershed))
+
+```
+
+```{r Loc1, eval=T, echo=F}
+Salmon_Entries %>%
+  select(Location1) %>%
+  unlist()%>%
+  table
+
+Chickamin <- Salmon_Entries %>%
+  filter(grepl(pattern='CHICKAMIN',Location1))%>%
+  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Location1 = gsub(pattern='"Replace with',replacement="",Location1))%>%
+  mutate(Location1 = gsub(pattern='CHICKAMIN',replacement="Chickamin",Location1))%>%
+  mutate(Location1 = gsub(pattern='ANDREW',replacement="Andrew",Location1))%>%
+  mutate(Location1 = ifelse(Location1=="---",NA,Location1))%>%
+  mutate(Location1 = str_trim(Location1))
+
+```
+
+```{r Loc2, eval=T, echo=F}
+Salmon_Entries %>%
+  select(Location2) %>%
+  unlist()%>%
+  table
+
+#Probably below the wier samples
+AukeFalls <- Salmon_Entries %>%
+  filter(grepl(pattern='Auke Cr. Falls',Location2))%>%
+  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Location2 = ifelse(Location2=="---",NA,Location2))%>%
+  mutate(Location2 = str_trim(Location2))
+
+```
+
+
+```{r Lat, eval=T, echo=F}
+Salmon_Entries %>%
+  select(StartLatitudeDD) %>%
+  unlist()%>%
+  table
+
+#0 isn't valid
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(StartLatitudeDD = ifelse(StartLatitudeDD==0,NA,StartLatitudeDD))
+
+Salmon_Entries %>%
+  select(EndLatitudeDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(EndLatitudeDD = ifelse(EndLatitudeDD=="---",NA,EndLatitudeDD))
+```
+
+```{r Long, eval=T, echo=F}
+Salmon_Entries %>%
+  select(StartLongitudeDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(EndLongitudeDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(EndLongitudeDD = ifelse(EndLongitudeDD=="---",NA,EndLongitudeDD))
+```
+
+```{r Long, eval=T, echo=F}
+Salmon_Entries %>%
+  select(EstimatedLatLongYesNo) %>%
+  unlist()%>%
+  table
+```
+
+The estimated or not estimated lat/long for each collection should be 
+entered with the metadata, looks like I might have to go back and 
+fill these in for salmon collections. 
+
+### Survey Specific Fields maybe not super relevant to salmon
+
+```{r Survey, eval=T, echo=F}
+Salmon_Entries %>%
+  select(CruiseID) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(HaulID) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(StationID) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(Equipment_Gear) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(DepthM) %>%
+  unlist()%>%
+  table
+#is 0 valid for depth in meters?
+
+Salmon_Entries %>%
+  select(StartDepthM) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(EndDepthM) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(TempC) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(Habitat) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(CruiseID = ifelse(CruiseID=="---",NA,CruiseID))%>%
+  mutate(HaulID = ifelse(HaulID=="---",NA,HaulID))%>%
+   mutate(StationID = ifelse(StationID=="---",NA,StationID))%>%
+  mutate(Habitat = ifelse(Habitat=="---",NA,Habitat))%>%
+   mutate(Equipment_Gear = ifelse(Equipment_Gear=="---",NA,Equipment_Gear))%>%
+  mutate(DepthM = ifelse(DepthM==0,NA,DepthM))%>%
+  mutate(TempC = ifelse(TempC==0,NA,TempC))
+
+```
+
+#### Morphometrics
+
+```{r Survey, eval=T, echo=F}
+Salmon_Entries %>%
+  select(LengthMM) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(LengthMM = ifelse(LengthMM==0,NA,LengthMM))
+
+Salmon_Entries %>%
+  select(LengthType) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(FishDepthMM) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  filter(!is.na(FishDepthMM)) %>%
+select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
+
+
+Salmon_Entries %>%
+  filter(!is.na(FishDepthMM)) %>%
+select(ABLG,AlternateID,CommonName,CollectionYear,CollectionMonth,Location1,FishDepthMM)
+
+
+Salmon_Entries %>%
+  select(WeightG) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(WeightG = ifelse(WeightG==0,NA,WeightG))
+
+#That 17,940g fish is 39.5lbs!
+
+
+Salmon_Entries %>%
+  select(Lifestage) %>%
+  unlist()%>%
+  table
+
+#These are all ages, what the hell is 1.10000000001, 2.20000002, 2.29999998. Need to go back to the actual data for those samples
+# should this be more of a categorical lifestage not age? smolt, juvenile, adult etc? We have age in years
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Lifestage = ifelse(Lifestage=="---",NA,Lifestage))
+
+StrngLS <- Salmon_Entries %>%
+  filter(Lifestage %in% c("1.1000000000000001","2.2000000000000002","2.2999999999999998"))%>%
+  select(ABLG,AlternateID,CommonName,CollectionYear,CollectionMonth,Location1,Lifestage,AgeYRS)
+
+Salmon_Entries %>%
+  select(AgeYRS) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(AgeYRS = ifelse(AgeYRS=="---",NA,AgeYRS))
+
+Salmon_Entries %>%
+  select(Sex) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Sex = ifelse(Sex=="---",NA,Sex))%>%
+  
+Salmon_Entries %>%
+  select(CaptureTime) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(ReleaseTime) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(IdentifiedBy) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(IdentifiedBy = ifelse(IdentifiedBy=="---",NA,IdentifiedBy))
+
+```
+
+#### Lab fields
+
+```{r Survey, eval=T, echo=F}
+Salmon_Entries %>%
+  select(Preservation) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Preservation = ifelse(Preservation=="---",NA,Preservation))%>%
+  mutate(Preservation = recode(Preservation,
+                               'dried tissue' = 'Dried',
+                               'whatman' = 'Dried',
+                               'Dry' = 'Dried',
+                               'ethanol' = 'Ethanol')) #based on Validation keys in template
+
+Salmon_Entries %>%
+  select(SampleRoom) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(SampleRoom = recode(SampleRoom,
+                              'Gave back to Wes (to give back to Charlie?)' = 'returned to C. Waters',
+                               'icnthyology' = 'Ichthyology (L107)',
+                               'Ichthy' = 'Ichthyology',
+                               'Ichthyology' = 'Ichthyology (L107)'))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(SampleRoom = ifelse(SampleRoom=="---",NA,SampleRoom))%>%
+  mutate(SampleRoom = ifelse(SampleRoom=="NA",NA,SampleRoom))
+  
+
+Salmon_Entries %>%
+  select(SampleLocation) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(SampleLocation = ifelse(SampleLocation=="---",NA,SampleLocation))%>%
+  mutate(SampleLocation = ifelse(SampleLocation=="NA",NA,SampleLocation))
+
+Salmon_Entries %>%
+  select(SampleSublocation) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(SampleSublocation = ifelse(SampleSublocation=="---",NA,SampleSublocation))
+
+#not sure if any of these are valid sublocations? LPW ask Juliana
+
+Salmon_Entries %>%
+  select(ExtractedBy) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(ExtractedBy = ifelse(ExtractedBy=="Juliana","Juliana Cornett",ExtractedBy))%>%
+  mutate(ExtractedBy = ifelse(ExtractedBy=="---",NA,ExtractedBy))
+
+
+Salmon_Entries %>%
+  select(ExtractionDate) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(ExtractionDate = ifelse(ExtractionDate=="---",NA,ExtractionDate))%>%
+  mutate(ExtractionDate = recode(ExtractionDate, #format YYYYMMDD
+                                 '10/25/2022' = '20221025',
+                                 '12/19/2022' = '20221219', 
+                                 '3/30/2021' = '20210330',
+                                 '5/16/2021' = '20210516', 
+                                 '5/23/2021' = '20210523',
+                                 '5/24/2022' = '20220524',
+                                 '5/4/2021' = '20210504',
+                                 '8/18/2022' = '20220818',
+                                 '9/21/2022' = '20220921'))
+
+Salmon_Entries %>%
+  select(ExtractionMethod) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(ExtractionMethod = recode(ExtractionMethod, 
+                                 'QIAGEN DNeasy' = 'QIAGEN',
+                                 'Macherey Nagel' = 'Macherey-Nagel',
+                                 'Machery-Nagel' = 'Macherey-Nagel'))%>%
+  mutate(ExtractionMethod= ifelse(ExtractionMethod=="Unknown",NA,ExtractionMethod))
+
+
+Salmon_Entries %>%
+  select(ExtractionPlate) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(ExtractionPlate = ifelse(ExtractionPlate=="---",NA,ExtractionPlate))
+
+Salmon_Entries %>%
+  select(ExtractionWell) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(ExtractionWell = ifelse(ExtractionWell=="---",NA,ExtractionWell))
+
+#Need to decide if we want to have A01 or A1 for well locations and be consistent
+
+Salmon_Entries %>%
+  select(DNAngul) %>%
+  unlist()%>%
+  table
+
+#0s could be valid here.
+
+Salmon_Entries %>%
+  select(DNAquality) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DNAquality = ifelse(DNAquality=="---",NA,DNAquality))%>%
+  mutate(DNAquality = str_trim(DNAquality))%>%
+  mutate(DNAquality = recode(DNAquality,
+                             'HMW band and smearing' = 'HMW bands and smearing',
+                             'No HMW bands and no smearing' = 'no HMW bands and no smearing',
+                             'no HMW bands and no smearing (empty)' = 'no HMW bands and no smearing',
+                             'no HMW bands and no smearing (empty) (empty)' = 'no HMW bands and no smearing',
+                             'No HMW bands and smearing' = 'no HMW bands and smearing'))
+
+
+Salmon_Entries %>%
+  select(DNAroom) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DNAroom = ifelse(DNAroom=="---",NA,DNAroom))
+
+Salmon_Entries %>%
+  select(DNAlocation) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DNAlocation = ifelse(DNAlocation=="---",NA,DNAlocation))%>%
+  mutate(DNAlocation = recode(DNAlocation,
+                              'F212_1' = 'F212-1',
+                              'F213_7' = 'F213-7'))
+
+
+Salmon_Entries %>%
+  select(DNAsublocation) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DNAsublocation = ifelse(DNAsublocation=="---",NA,DNAsublocation))
+
+#WGS1
+Salmon_Entries %>%
+  select(WGSDateYYYYMMDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(WGSBatchID) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(WGSLaneID) %>%
+  unlist()%>%
+  table
+
+#WGS2 -None have been used multiple times, all blanks
+Salmon_Entries %>%
+  select(WGSDate2YYYYMMDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(WGSBatchID2) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(WGSLaneID2) %>%
+  unlist()%>%
+  table
+
+#GTseq - All left empty... just not updated. 
+Salmon_Entries %>%
+  select(GTSeqDateYYYYMMDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(GTSeqPanel) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(GTSeqDate2YYYYMMDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(GTSeqPanel2) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(GTSeqDate3YYYYMMDD) %>%
+  unlist()%>%
+  table
+
+Salmon_Entries %>%
+  select(GTSeqPanel3) %>%
+  unlist()%>%
+  table
+
+#Genetic ID missing
+
+#Comments are fine?
+
+```
+
+
