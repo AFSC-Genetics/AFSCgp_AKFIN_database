@@ -278,21 +278,53 @@ BadRcrds <- Salmon_Entries %>%
 
 What are the samples from 
 
-Sckye_2014_Tog_XX - Little Togiak Beach
-PL_XX - Sckye_LkWA2001
-11/7/00_CedarSockeye_XX - Sckye_Cedar_1999_2000
-Cedar_R_1999_ - 
-Sckye2001_Baker_
-
 BC22_25300_5006_des/env Chinook bycatch?
 
-MCGL_18_ - Coregonus clupeaformis? whitefish_01 plate; Jared Homola Molecular Conservation Genetics Lab
-
-DipacMale/FemaleCoho_2011; 
-
 ```{r}
+# MCGL_18_ - Coregonus clupeaformis? whitefish_01 plate; Jared Homola Molecular Conservation Genetics Lab
 Salmon_Entries <- Salmon_Entries %>%
   mutate(DonatingLab = ifelse(is.na(DonatingLab) & CommonName == 'lake whitefish','MCGL-Jared Homola',DonatingLab))
+
+#Sckye_2014_Tog_XX - Little Togiak Beach; Daniel Schindler UW
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = case_when(
+    is.na(DonatingLab) & grepl("Sckye_2014_Tog_", AlternateID) ~ "UW-Daniel Schindler",
+    TRUE ~ DonatingLab # 
+  ))
+
+#AFSC-Ingrid Spies 
+# PL_XX - Sckye_LkWA2001
+# 11/7/00_CedarSockeye_XX - Sckye_Cedar_1999_2000
+# Cedar_R_1999_ - 
+# Sckye2001_Baker_
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = case_when(
+    is.na(DonatingLab) & grepl("11/7/00_CedarSockeye_|Sckye_Cedar_1999_2000|Cedar_R_1999_|Sckye_Baker_|Sckye2001_Baker_", AlternateID) ~ "AFSC-Ingrid Spies",
+    TRUE ~ DonatingLab # 
+  ))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = case_when(
+    is.na(DonatingLab) & grepl("Sckye_LkWA2001", ExtractionPlate) ~ "AFSC-Ingrid Spies",
+    TRUE ~ DonatingLab # 
+  ))
+
+
+# DipacMale/FemaleCoho_2011; DIPAC-Katie Harms
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = case_when(
+    is.na(DonatingLab) & grepl("Coho_2011", AlternateID) ~ "DIPAC-Katie Harms",
+    TRUE ~ DonatingLab # 
+  ))
+
+
+# BC22_25300_5006; NMFS-Observer Program
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingLab = case_when(
+    is.na(DonatingLab) & grepl("BC22_", AlternateID) ~ "NMFS-Observer Program",
+    TRUE ~ DonatingLab # 
+  ))
 ```
 
 
@@ -534,7 +566,7 @@ Salmon_Entries <- Salmon_Entries %>%
 
 #### Morphometrics
 
-```{r Survey, eval=T, echo=F}
+```{r Morpho, eval=T, echo=F}
 Salmon_Entries %>%
   select(LengthMM) %>%
   unlist()%>%
@@ -588,6 +620,48 @@ StrngLS <- Salmon_Entries %>%
   filter(Lifestage %in% c("1.1000000000000001","2.2000000000000002","2.2999999999999998"))%>%
   select(ABLG,AlternateID,CommonName,CollectionYear,CollectionMonth,Location1,Lifestage,AgeYRS)
 
+#After looking at the sockeye metadata it appears that there was an excel file mixup that lead to 
+#issues with the formatting of the European ages for some salmon records
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Lifestage = case_when(
+    Lifestage == "1.1000000000000001" ~ "1.1",
+    Lifestage == "2.2000000000000002" ~ "2.2",
+    Lifestage == "2.2999999999999998" ~ "2.3",
+    TRUE ~ as.character(Lifestage) 
+  ))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(AgeYRS = case_when(
+    AgeYRS == "1.1000000000000001" ~ "1.1",
+    TRUE ~ as.character(AgeYRS) 
+  ))
+
+# Now lets make a column for Age_Total and Age_European
+EuropeanAges <- Salmon_Entries %>%
+  filter(grepl(pattern="\\.",Lifestage)|grepl(pattern="\\.",AgeYRS))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Age_European = ifelse(grepl(pattern="\\.",Lifestage),Lifestage,
+                                 ifelse(grepl(pattern="\\.",AgeYRS), AgeYRS,
+                                        NA)))
+
+# And then convert all the ages in Lifestage to Adult, cuase they were sampled 
+# at a weir and were adults of different ages.
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Lifestage = case_when(
+    grepl("\\.", Lifestage) ~ 'adult',
+    grepl("jack", Lifestage) ~ 'adult',
+    TRUE                    ~ Lifestage))
+
+
+Salmon_Entries %>%
+  select(Lifestage) %>%
+  unlist()%>%
+  table
+
+#good now I just have adult and juvenile...  
+Juvies <- Salmon_Entries %>% filter(Lifestage == 'juvenile')
+
 Salmon_Entries %>%
   select(AgeYRS) %>%
   unlist()%>%
@@ -596,13 +670,54 @@ Salmon_Entries %>%
 Salmon_Entries <- Salmon_Entries %>%
   mutate(AgeYRS = ifelse(AgeYRS=="---",NA,AgeYRS))
 
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(Age_European = na_if(Age_European, 'r.r'))%>%
+  mutate(Age_European = na_if(Age_European, 'r.1'))
+    
+
+AmbigAges <- Salmon_Entries %>% filter(grepl(pattern="or",AgeYRS))
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(AgeYRS = case_when(
+    grepl("or", AgeYRS) ~ NA,
+    TRUE ~ AgeYRS))
+
+ Salmon_Entries <- Salmon_Entries %>%
+  mutate(Age_Total = case_when(
+    grepl("\\.", Age_European) ~ map_dbl(str_split(Age_European, "\\."), ~ sum(as.numeric(.x))+1),
+    TRUE                      ~ as.numeric(AgeYRS)))
+
+
+ Salmon_Entries %>%
+  select(Age_Total) %>%
+  unlist()%>%
+  table
+ 
+ Salmon_Entries %>%
+  select(Age_European) %>%
+  unlist()%>%
+  table
+ 
+ 
 Salmon_Entries %>%
   select(Sex) %>%
   unlist()%>%
   table
 
+Salmon_Entries %>% filter(grepl(pattern='1|2|3',Sex)) %>% select(ABLG,AlternateID,DonatingLab,CommonNameOLD)
+#1,2,3 samples are from ADFG so 1 = Male, 2 = Female, and 3 = NA
+
+
 Salmon_Entries <- Salmon_Entries %>%
-  mutate(Sex = ifelse(Sex=="---",NA,Sex))%>%
+  mutate(Sex = case_when(
+    Sex=="---" ~ NA,
+    Sex == 'F' ~ 'female',
+    Sex == 'M' ~ 'male',
+    Sex == 'male (jack)' ~ 'jack',
+    Sex == 'U' ~ NA,
+    Sex == '3' ~ NA,
+    Sex == '1' ~ 'male',
+    Sex == '2' ~ 'female'))
   
 Salmon_Entries %>%
   select(CaptureTime) %>%
@@ -852,6 +967,17 @@ Salmon_Entries %>%
 #Genetic ID missing
 
 #Comments are fine?
+
+Salmon_Entries <- Salmon_Entries %>%
+  select(-c(CommonNameOLDlc,CommonNameOLD,GenusOLD,SpeciesNameOLD))%>%
+  relocate(CommonName,.after='AlternateID')%>%
+  relocate(Genus,.after='FamilyOLD')%>%
+  relocate(Species,.after='Genus')%>%
+  rename('Family' = 'FamilyOLD')
+
+write_delim(x=Salmon_Entries,
+          file="Salmon_dbEntries_Clean.txt",
+          delim="\t")
 
 ```
 
