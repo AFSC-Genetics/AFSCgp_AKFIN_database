@@ -368,32 +368,46 @@ Other_Entries <- Other_Entries %>%
                                'ethanol' = 'Ethanol',
                                'frozen' = 'Frozen')) #based on Validation keys in template
 
-#DNAroom
+#SampleRoom 
 Other_Entries %>%
-  select(DNAroom) %>%
+  select(SampleRoom) %>%
   unlist()%>%
   table
 
 Other_Entries <- Other_Entries %>%
-  mutate(DNAroom = ifelse(DNAroom=="---",NA,DNAroom)) 
+  mutate(SampleRoom = ifelse(SampleRoom=="---",NA,SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="Ichthy","Ichthyology",SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="ichthyology","Ichthyology",SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="Icthology","Ichthyology",SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="Icthyology","Ichthyology",SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="ichthyology room","Ichthyology",SampleRoom),
+         SampleRoom = ifelse(SampleRoom==213,"L213",SampleRoom))
 
-#DNAlocation
+#SampleLocation
 Other_Entries %>%
-  select(DNAlocation) %>%
+  select(SampleLocation) %>%
+  unlist()%>%
+  table
+
+ Other_Entries <- Other_Entries %>%
+  mutate(SampleLocation = ifelse(SampleLocation=="---",NA,SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="gave back to charlie","returned",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="juv pcod shelf","S14 Juvenile PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="juvenile cod shelf","S14 Juvenile PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="Red folder holder w/ age0 pcod","S14 Juvenile PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="P cod shelf","S15 PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="P. cod shelf","S15 PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="pcod shelf","S15 PCod",SampleLocation),
+         SampleLocation = ifelse(SampleLocation=="Pcod Shelf","S15 PCod",SampleLocation))
+
+#SampleSublocation 
+Other_Entries %>%
+  select(SampleSublocation) %>%
   unlist()%>%
   table
 
 Other_Entries <- Other_Entries %>%
-  mutate(DNAlocation = ifelse(DNAlocation=="---",NA,DNAlocation)) 
-
-#DNAsublocation 
-Other_Entries %>%
-  select(DNAsublocation) %>%
-  unlist()%>%
-  table
-
-Other_Entries <- Other_Entries %>%
-  mutate(DNAsublocation = ifelse(DNAsublocation=="---",NA,DNAsublocation)) 
+  mutate(SampleSublocation = ifelse(SampleSublocation=="---",NA,SampleSublocation))
 
 #ExtractedBy
 Other_Entries %>%
@@ -534,168 +548,105 @@ Other_Entries <- Other_Entries %>%
                              'No HMW Bands' = 'no HMW bands and no smearing'))
 
 
-
-##### PAUSING HERE
-
-#SampleRoom 
-Other_Entries <- Other_Entries %>%
-  mutate(SampleRoom = ifelse(SampleRoom=="---",NA,SampleRoom),
-         SampleRoom = ifelse(SampleRoom=="Ichthy","Ichthyology",SampleRoom),
-         SampleRoom = ifelse(SampleRoom=="ichthyology","Ichthyology",SampleRoom),
-         SampleRoom = ifelse(SampleRoom=="Icthology","Ichthyology",SampleRoom),
-         SampleRoom = ifelse(SampleRoom=="Icthyology","Ichthyology",SampleRoom))
-
-NoExtractionPlate <- Other_Entries %>%
-  filter(is.na(ExtractionPlate))
-
-NoExtractionPlate %>%
-  filter(SampleRoom == "Ichthyology") %>%
-  count(SampleLocation, SampleSublocation, DonatingLab, Collector, CommonName, Family, Genus, Species, name = "n") 
-
-NoExtractionPlate %>%
-  filter(is.na(SampleRoom)) %>%
-  count(SampleLocation, SampleSublocation, DonatingLab, Collector, CommonName, Family, Genus, Species, name = "n") 
-
-
+#DNAroom
 Other_Entries %>%
-  filter(ExtractionPlate == "tube")
-
-
-
-
-Salmon_Entries %>%
-  select(ExtractionWell) %>%
-  unlist()%>%
-  table
-
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(ExtractionWell = ifelse(ExtractionWell=="---",NA,ExtractionWell))
-```
-
-what to do with these samples? confirm their physical location and then keep in database? 
-what about samples with missing sample location info? 
-
-check location of ABLG_37256 - only one sample; no plate info but sublocation box is there.... 
-Kim - find location of gadid DNA and update
-
-ask wes about species/collections with lots of missing samples:
-large mouth bass and channel catfish from Cory Dick
-pacific herring from Sharon Wildes
-arctic cod from Kris Cieciel, Ed Farley, NOAA
-numerous pollock and pcod entries... maybe this info is with metadata from Sara?
-crab from Louis Copeman 
-flathead sole/bering flounder/yellowfin sole from Ingrid Spies
-
-
-#### Lab fields
-
-```{r Survey, eval=T, echo=F}
-
-
-Salmon_Entries %>%
   select(DNAroom) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(DNAroom = ifelse(DNAroom=="---",NA,DNAroom))
+Other_Entries <- Other_Entries %>%
+  mutate(DNAroom = ifelse(DNAroom=="---",NA,DNAroom)) 
 
-Salmon_Entries %>%
+#DNAlocation
+Other_Entries %>%
   select(DNAlocation) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(DNAlocation = ifelse(DNAlocation=="---",NA,DNAlocation))%>%
-  mutate(DNAlocation = recode(DNAlocation,
-                              'F212_1' = 'F212-1',
-                              'F213_7' = 'F213-7'))
+Other_Entries <- Other_Entries %>%
+  mutate(DNAlocation = ifelse(DNAlocation=="---",NA,DNAlocation)) 
 
-
-Salmon_Entries %>%
+#DNAsublocation 
+Other_Entries %>%
   select(DNAsublocation) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(DNAsublocation = ifelse(DNAsublocation=="---",NA,DNAsublocation))
+Other_Entries <- Other_Entries %>%
+  mutate(DNAsublocation = ifelse(DNAsublocation=="---",NA,DNAsublocation)) 
+
 
 #WGS1
-Salmon_Entries %>%
+Other_Entries %>%
   select(WGSDateYYYYMMDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(WGSBatchID) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(WGSLaneID) %>%
   unlist()%>%
   table
 
-#WGS2 -None have been used multiple times, all blanks
-Salmon_Entries %>%
+#WGS2 - all blanks
+Other_Entries %>%
   select(WGSDate2YYYYMMDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(WGSBatchID2) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(WGSLaneID2) %>%
   unlist()%>%
   table
 
-#GTseq - All left empty... just not updated. 
-Salmon_Entries %>%
+#GTseq - all blanks 
+Other_Entries %>%
   select(GTSeqDateYYYYMMDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(GTSeqPanel) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(GTSeqDate2YYYYMMDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(GTSeqPanel2) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(GTSeqDate3YYYYMMDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(GTSeqPanel3) %>%
   unlist()%>%
   table
 
-#Genetic ID missing
+# Genetic ID - this column doesn't seem to exist
 
-#Comments are fine?
-
+#Comments
+Other_Entries %>%
+  select(Comments) %>%
+  unlist()%>%
+  table
 ```
-
-
-
-
-
-
-####### resume working here ######## 
-
 
 
 ### Contact, Donating Lab, Collector
@@ -707,127 +658,80 @@ sheet for upload. So perhaps that field has been replaced with
 'Collector' which has 69 unique values. 
 
 ```{r StndrzCollector, eval=T, echo=T}
-Salmon_Entries %>%
+Other_Entries %>%
   select(Collector) %>%
   table
   
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(Collector = recode(Collector,
-                            'LPW-Waters' = 'Charlie Waters',
-                            'Vulstek' = 'Scott Vulstek',
-                            'Mike-Courtney' = 'Michael Courtney'))%>%
+                            'E.Russ' = 'Elisa Russ',
+                            'Lorenz Hauzer' = 'Lorenz Hauser',
+                            'NMFS/ P.G./ S.K.' = 'NMFS/ S.K., P.G.'))%>%
   mutate(Collector = ifelse(Collector=="---",NA,Collector))
 
-NoCollector <- Salmon_Entries %>%
+NoCollector <- Other_Entries %>%
   filter(is.na(Collector)) 
-
 ```
 
-There are 10,941 records without a collector recorded. Maybe that is fine provided
+There are 12404 records without a collector recorded. Maybe that is fine provided
 we have a contact/donating lab for the sample. 
 
 Now take a stab at the Donating Lab
 
 ```{r StndrzCollector, eval=T, echo=T}
-Salmon_Entries %>%
+Other_Entries %>%
   select(DonatingLab) %>%
   table
   
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(DonatingLab = recode(DonatingLab,
+                              'ABL freezer' = 'ABL Freezer',
+                              'ADFG Anchorage' = 'ADFG-Anchorage',
+                              'Canino_Spies' = 'Canino/Spies',
                             'LPW/Waters' = 'AFSC-LPW',
-                            'Little Port Walter' = 'AFSC-LPW',
-                            'Vulstek' = 'AFSC-Scott Vulstek',
-                            'Vulstek?' = 'AFSC-Scott Vulstek',
-                            'Seitz' = 'UAF-Andy Seitz',
-                            'Manhard Mol Bio 2018' = 'UAF-Anthony Gharrett'))%>%
+                            'Matt Craig' = 'Matt Craig SWFSC',
+                            'Spies' = 'Ingrid Spies'))%>%
   mutate(DonatingLab = ifelse(DonatingLab=="---",NA,DonatingLab))
 
-Salmon_Entries %>%
-  select(DonatingLab) %>%
-  table
-
-sum(is.na(Salmon_Entries$DonatingLab))
-
+sum(is.na(Other_Entries$DonatingLab))
 ```
 
 ```{r UnknwnRcd, eval=T, echo=T}
-BadRcrds <- Salmon_Entries %>%
+BadRcrds <- Other_Entries %>%
   filter(is.na(DonatingLab)&is.na(Collector))
 ```
 
 What are the samples from 
 
-Sckye_2014_Tog_XX - Little Togiak Beach
-PL_XX - Sckye_LkWA2001
-11/7/00_CedarSockeye_XX - Sckye_Cedar_1999_2000
-Cedar_R_1999_ - 
-Sckye2001_Baker_
-
-BC22_25300_5006_des/env Chinook bycatch?
-
-MCGL_18_ - Coregonus clupeaformis? whitefish_01 plate; Jared Homola Molecular Conservation Genetics Lab
-
-DipacMale/FemaleCoho_2011; 
-
-```{r}
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(DonatingLab = ifelse(is.na(DonatingLab) & CommonName == 'lake whitefish','MCGL-Jared Homola',DonatingLab))
-```
-
+sharks, sablefish, seal scat, pcod
 
 
 #### Collection Year, Month, Day
 
 ```{r Year, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(CollectionYear) %>%
   unlist()%>%
   table
-  
-NoYear <- Salmon_Entries %>%
-  filter(is.na(CollectionYear))
 ```
 
 ```{r Month, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(CollectionMonth) %>%
   unlist()%>%
   table
  
-Salmon_Entries %>%
-  filter(CollectionMonth == 'NA')
-
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(CollectionMonth = ifelse(CollectionMonth=="NA",NA,CollectionMonth))
-
-NoMonth <- Salmon_Entries %>%
+Other_Entries %>%
   filter(is.na(CollectionMonth))
 ```
 
 ```{r Year, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(CollectionDay) %>%
   unlist()%>%
   table
-  
-ShitSamp <- Salmon_Entries %>%
-  filter(CollectionDay=='103') %>%
-  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
 
-Salmon_Entries %>%
-  filter(ABLG %in% c(41646,41647,41648,41649,41650)) %>%
-  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
-
-#Turns out that Little Whitefish should be 8/11
-Salmon_Entries %>%
-  filter(grepl(pattern='SLWHI11',AlternateID))%>%
-  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
-
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(CollectionDay = ifelse(grepl(pattern='SLWHI11',AlternateID),'11',CollectionDay))
-  
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(CollectionDay = recode(CollectionDay,
                                 '1' = '01',
                                 '2' = '02',
@@ -837,41 +741,71 @@ Salmon_Entries <- Salmon_Entries %>%
                                 '6' = '06',
                                 '7' = '07',
                                 '8' = '08',
-                                '9' = '09'))
-
-Salmon_Entries %>%
-  select(CollectionDay) %>%
-  unlist()%>%
-  table
+                                '9' = '09')) %>%
+  mutate(CollectionDay = ifelse(CollectionDay == "?", NA, CollectionDay))
 ```
 
 
 ### Location
 
 ```{r MR, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(MarineRegion) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(MarineRegion = ifelse(MarineRegion=="---",NA,MarineRegion))
+Other_Entries <- Other_Entries %>%
+  mutate(MarineRegion = ifelse(MarineRegion=="---",NA,MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="AI","Aleutian Island",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="WGOA","wGOA",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="stat area 505932",505932,MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="Eastern GOA","eGOA",MarineRegion))
 
+Other_Entries %>%
+  select(StateCountry) %>%
+  unlist()%>%
+  table
+
+Other_Entries <- Other_Entries %>%
+  mutate(StateCountry = ifelse(StateCountry=="---",NA,StateCountry),
+         StateCountry = ifelse(StateCountry=="AK","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="AK, USA","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="AK; USA","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="AK;USA","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Alaska","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Alaska USA","Alaska, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="BC, CAN","British Columbia, Cananda",StateCountry),
+         StateCountry = ifelse(StateCountry=="BC;Canada","British Columbia, Cananda",StateCountry),
+         StateCountry = ifelse(StateCountry=="CA, USA","California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="CA;USA","California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="CTl; USA","Connecticut, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Eureka, CA","Eureka, California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Gaviota","Gaviota, California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Hokkaido;JP","Hokkaido, Japan",StateCountry),
+         StateCountry = ifelse(StateCountry=="KOREA","Korea",StateCountry),
+         StateCountry = ifelse(StateCountry=="Magdalena Bay, MX","Magdalena Bay, Mexico",StateCountry),
+         StateCountry = ifelse(StateCountry=="MX","Mexico",StateCountry),
+         StateCountry = ifelse(StateCountry=="OR, USA","Oregon, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="OR;USA","Oregon, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Pescadero, CA","Pescadero, California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Punta Colonet, BC, MX","Punta Colonet, Baja California, Mexico",StateCountry),
+         StateCountry = ifelse(StateCountry=="RI;USA","Rhode Island, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="Santa Cruz, CA","Santa Cruz, California, USA",StateCountry),
+         StateCountry = ifelse(StateCountry=="WA;USA","Washington, USA",StateCountry))
 ```
 
 ```{r FWWS, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(FreshwaterWatershed) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(FreshwaterWatershed = ifelse(FreshwaterWatershed=="---",NA,FreshwaterWatershed))
-
 ```
 
 ```{r Loc1, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(Location1) %>%
   unlist()%>%
   table
@@ -887,121 +821,122 @@ Salmon_Entries <- Salmon_Entries %>%
   mutate(Location1 = ifelse(Location1=="---",NA,Location1))%>%
   mutate(Location1 = str_trim(Location1))
 
+Other_Entries <- Other_Entries %>%
+  mutate(Location1 = ifelse(Location1=="---",NA,Location1))
 ```
 
 ```{r Loc2, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(Location2) %>%
   unlist()%>%
   table
 
-#Probably below the wier samples
-AukeFalls <- Salmon_Entries %>%
-  filter(grepl(pattern='Auke Cr. Falls',Location2))%>%
-  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
-
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(Location2 = ifelse(Location2=="---",NA,Location2))%>%
-  mutate(Location2 = str_trim(Location2))
-
+Other_Entries <- Other_Entries %>%
+  mutate(Location2 = ifelse(Location2=="---",NA,Location2))
 ```
 
 
 ```{r Lat, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(StartLatitudeDD) %>%
   unlist()%>%
   table
 
 #0 isn't valid
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(StartLatitudeDD = ifelse(StartLatitudeDD==0,NA,StartLatitudeDD))
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(EndLatitudeDD) %>%
   unlist()%>%
   table
+#no entries
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(EndLatitudeDD = ifelse(EndLatitudeDD=="---",NA,EndLatitudeDD))
 ```
 
 ```{r Long, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(StartLongitudeDD) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(EndLongitudeDD) %>%
   unlist()%>%
   table
+#no entries
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(EndLongitudeDD = ifelse(EndLongitudeDD=="---",NA,EndLongitudeDD))
 ```
 
 ```{r Long, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(EstimatedLatLongYesNo) %>%
   unlist()%>%
   table
+
+#no entries
 ```
 
 The estimated or not estimated lat/long for each collection should be 
-entered with the metadata, looks like I might have to go back and 
-fill these in for salmon collections. 
+entered with the metadata... not entered for any entry 
 
 ### Survey Specific Fields maybe not super relevant to salmon
 
 ```{r Survey, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(CruiseID) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(HaulID) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(StationID) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(Equipment_Gear) %>%
   unlist()%>%
   table
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(DepthM) %>%
   unlist()%>%
   table
 #is 0 valid for depth in meters?
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(StartDepthM) %>%
   unlist()%>%
   table
+#nothing
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(EndDepthM) %>%
   unlist()%>%
   table
+#nothing
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(TempC) %>%
   unlist()%>%
   table
+## are the 0's real data??? i would think not...
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(Habitat) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(CruiseID = ifelse(CruiseID=="---",NA,CruiseID))%>%
   mutate(HaulID = ifelse(HaulID=="---",NA,HaulID))%>%
    mutate(StationID = ifelse(StationID=="---",NA,StationID))%>%
@@ -1009,99 +944,98 @@ Salmon_Entries <- Salmon_Entries %>%
    mutate(Equipment_Gear = ifelse(Equipment_Gear=="---",NA,Equipment_Gear))%>%
   mutate(DepthM = ifelse(DepthM==0,NA,DepthM))%>%
   mutate(TempC = ifelse(TempC==0,NA,TempC))
-
 ```
 
 #### Morphometrics
 
 ```{r Survey, eval=T, echo=F}
-Salmon_Entries %>%
+Other_Entries %>%
   select(LengthMM) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(LengthMM = ifelse(LengthMM==0,NA,LengthMM))
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(LengthType) %>%
   unlist()%>%
   table
+#empty
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(FishDepthMM) %>%
   unlist()%>%
   table
+#empty
 
-Salmon_Entries %>%
-  filter(!is.na(FishDepthMM)) %>%
-select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
-
-
-Salmon_Entries %>%
-  filter(!is.na(FishDepthMM)) %>%
-select(ABLG,AlternateID,CommonName,CollectionYear,CollectionMonth,Location1,FishDepthMM)
-
-
-Salmon_Entries %>%
+Other_Entries %>%
   select(WeightG) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(WeightG = ifelse(WeightG==0,NA,WeightG))
 
-#That 17,940g fish is 39.5lbs!
 
-
-Salmon_Entries %>%
+Other_Entries %>%
   select(Lifestage) %>%
   unlist()%>%
   table
 
-#These are all ages, what the hell is 1.10000000001, 2.20000002, 2.29999998. Need to go back to the actual data for those samples
 # should this be more of a categorical lifestage not age? smolt, juvenile, adult etc? We have age in years
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(Lifestage = ifelse(Lifestage=="---",NA,Lifestage))
+Other_Entries <- Other_Entries %>%
+  mutate(Lifestage = ifelse(Lifestage=="---",NA,Lifestage),
+         Lifestage = ifelse(Lifestage=="Adult","adult",Lifestage),
+         Lifestage = ifelse(Lifestage=="Juvenile","juvenile",Lifestage))
 
-StrngLS <- Salmon_Entries %>%
-  filter(Lifestage %in% c("1.1000000000000001","2.2000000000000002","2.2999999999999998"))%>%
-  select(ABLG,AlternateID,CommonName,CollectionYear,CollectionMonth,Location1,Lifestage,AgeYRS)
-
-Salmon_Entries %>%
+Other_Entries %>%
   select(AgeYRS) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(AgeYRS = ifelse(AgeYRS=="---",NA,AgeYRS))
+Other_Entries <- Other_Entries %>%
+  mutate(AgeYRS = ifelse(AgeYRS=="---",NA,AgeYRS),
+         AgeYRS = ifelse(AgeYRS==0,NA,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="16.100000000000001",16.1,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="17.100000000000001",17.1,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="18.100000000000001",18.1,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="18.399999999999999",18.4,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="19.100000000000001",19.1,AgeYRS),
+         AgeYRS = ifelse(AgeYRS=="20.100000000000001",20.1,AgeYRS))
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(Sex) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(Sex = ifelse(Sex=="---",NA,Sex))%>%
+### numbers for sex represent what? 
+Other_Entries <- Other_Entries %>%
+  mutate(Sex = ifelse(Sex=="---",NA,Sex),
+         Sex = ifelse(Sex=="NA",NA,Sex),
+         Sex = ifelse(Sex=="F","female",Sex),
+         Sex = ifelse(Sex=="M","male",Sex),
+         Sex = ifelse(Sex=="U","unsexed",Sex))
   
-Salmon_Entries %>%
+Other_Entries %>%
   select(CaptureTime) %>%
   unlist()%>%
   table
+#empty
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(ReleaseTime) %>%
   unlist()%>%
   table
+#empty
 
-Salmon_Entries %>%
+Other_Entries %>%
   select(IdentifiedBy) %>%
   unlist()%>%
   table
 
-Salmon_Entries <- Salmon_Entries %>%
+Other_Entries <- Other_Entries %>%
   mutate(IdentifiedBy = ifelse(IdentifiedBy=="---",NA,IdentifiedBy))
-
 ```
 
 
