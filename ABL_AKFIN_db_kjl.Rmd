@@ -348,7 +348,17 @@ Other_Entries %>%
   arrange(Family, Genus, Species)
 ```
 
-looks better - still need to consult wes about what some of these entries are.... 
+
+start a table to export and ask wes about
+```{r}
+question_entries1 <- Other_Entries %>%
+  filter(CommonName %in% c("crab", "placeholder-unknown", "seal scat"))
+question_entries2 <- Other_Entries %>%
+  filter(is.na(CommonName)) %>%
+  filter(is.na(Genus))
+```
+
+
 
 ### Lab Fields ### 
 
@@ -376,6 +386,7 @@ Other_Entries %>%
 
 Other_Entries <- Other_Entries %>%
   mutate(SampleRoom = ifelse(SampleRoom=="---",NA,SampleRoom),
+         SampleRoom = ifelse(SampleRoom=="NA",NA,SampleRoom),
          SampleRoom = ifelse(SampleRoom=="Ichthy","Ichthyology",SampleRoom),
          SampleRoom = ifelse(SampleRoom=="ichthyology","Ichthyology",SampleRoom),
          SampleRoom = ifelse(SampleRoom=="Icthology","Ichthyology",SampleRoom),
@@ -428,6 +439,7 @@ Other_Entries <- Other_Entries %>%
          ExtractedBy = ifelse(ExtractedBy=="Kirby","Kirby Karpan",ExtractedBy),
          ExtractedBy = ifelse(ExtractedBy=="Kirby/Dave N","Kirby Karpan",ExtractedBy),
          ExtractedBy = ifelse(ExtractedBy=="KL","Kim Ledger",ExtractedBy),
+         ExtractedBy = ifelse(ExtractedBy=="HvN","Hanhvan Nguyen",ExtractedBy),                    
          ExtractedBy = ifelse(ExtractedBy=="N/A",NA,ExtractedBy))%>%
   mutate(ExtractedBy = ifelse(ExtractedBy=="---",NA,ExtractedBy))
 
@@ -535,9 +547,9 @@ Other_Entries <- Other_Entries %>%
                              #yes band and no smear
                              
                              #no band and yes smear 
-                             'no  HMW bands and smearing' = 'no HMW bands and smearing',
-                             'no HMW band and smearing' = 'no HMW bands and smearing', 
-                             'No HMW bands and smearing' = 'no HMW bands and smearing',
+                             'no  HMW bands and smearing' = 'no HMW bands and yes smearing',
+                             'no HMW band and smearing' = 'no HMW bands and yes smearing', 
+                             'No HMW bands and smearing' = 'no HMW bands and yes smearing',
 
                              #no band and no smear
                              'No HMW bands and no smearing' = 'no HMW bands and no smearing',
@@ -697,8 +709,11 @@ sum(is.na(Other_Entries$DonatingLab))
 ```
 
 ```{r UnknwnRcd, eval=T, echo=T}
-BadRcrds <- Other_Entries %>%
+question_entries3 <- Other_Entries %>%
   filter(is.na(DonatingLab)&is.na(Collector))
+
+question_entries4 <- Other_Entries %>%
+  filter(Collector == "Courtney?")
 ```
 
 What are the samples from 
@@ -720,9 +735,6 @@ Other_Entries %>%
   select(CollectionMonth) %>%
   unlist()%>%
   table
- 
-Other_Entries %>%
-  filter(is.na(CollectionMonth))
 ```
 
 ```{r Year, eval=T, echo=F}
@@ -756,10 +768,24 @@ Other_Entries %>%
 
 Other_Entries <- Other_Entries %>%
   mutate(MarineRegion = ifelse(MarineRegion=="---",NA,MarineRegion),
-         MarineRegion = ifelse(MarineRegion=="AI","Aleutian Island",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="AI","Aleutian Islands",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="CBS","Coastal BC",MarineRegion),
          MarineRegion = ifelse(MarineRegion=="WGOA","wGOA",MarineRegion),
          MarineRegion = ifelse(MarineRegion=="stat area 505932",505932,MarineRegion),
-         MarineRegion = ifelse(MarineRegion=="Eastern GOA","eGOA",MarineRegion))
+         MarineRegion = ifelse(MarineRegion=="Eastern GOA","eGOA",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="PWS","Prince William Sound",MarineRegion),)
+
+##change the stat areas to be region?
+Other_Entries <- Other_Entries %>%
+  mutate(Location1 = ifelse(MarineRegion %in% c("476004/476003", "485935", "505932", "515905", "515936"), MarineRegion, Location1))
+ 
+Other_Entries <- Other_Entries %>%
+  mutate(MarineRegion = ifelse(MarineRegion=="476004/476003","Prince William Sound",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="485935","Prince William Sound",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="505932","Cook Inlet",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="515905","Cook Inlet",MarineRegion),
+         MarineRegion = ifelse(MarineRegion=="515936","Cook Inlet",MarineRegion))
+  
 
 Other_Entries %>%
   select(StateCountry) %>%
@@ -809,17 +835,6 @@ Other_Entries %>%
   select(Location1) %>%
   unlist()%>%
   table
-
-Chickamin <- Salmon_Entries %>%
-  filter(grepl(pattern='CHICKAMIN',Location1))%>%
-  select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
-
-Salmon_Entries <- Salmon_Entries %>%
-  mutate(Location1 = gsub(pattern='"Replace with',replacement="",Location1))%>%
-  mutate(Location1 = gsub(pattern='CHICKAMIN',replacement="Chickamin",Location1))%>%
-  mutate(Location1 = gsub(pattern='ANDREW',replacement="Andrew",Location1))%>%
-  mutate(Location1 = ifelse(Location1=="---",NA,Location1))%>%
-  mutate(Location1 = str_trim(Location1))
 
 Other_Entries <- Other_Entries %>%
   mutate(Location1 = ifelse(Location1=="---",NA,Location1))
@@ -987,7 +1002,15 @@ Other_Entries %>%
 Other_Entries <- Other_Entries %>%
   mutate(Lifestage = ifelse(Lifestage=="---",NA,Lifestage),
          Lifestage = ifelse(Lifestage=="Adult","adult",Lifestage),
-         Lifestage = ifelse(Lifestage=="Juvenile","juvenile",Lifestage))
+         Lifestage = ifelse(Lifestage=="Juvenile","juvenile",Lifestage),
+         Lifestage = ifelse(Lifestage=="Juveniles","juvenile",Lifestage))
+
+Other_Entries %>%
+  filter(Lifestage == 7)    #####these are pcod ages????
+
+Other_Entries <- Other_Entries %>%
+  mutate(AgeYRS = ifelse(Lifestage %in% c(1,2,4,5,6,7,9), Lifestage, AgeYRS),
+         Lifestage = ifelse(Lifestage %in% c(1,2,4,5,6,7,9), NA, Lifestage))
 
 Other_Entries %>%
   select(AgeYRS) %>%
@@ -1009,6 +1032,9 @@ Other_Entries %>%
   unlist()%>%
   table
 
+Other_Entries %>%
+  filter(Sex %in% c(1,2,3))
+
 ### numbers for sex represent what? 
 Other_Entries <- Other_Entries %>%
   mutate(Sex = ifelse(Sex=="---",NA,Sex),
@@ -1016,6 +1042,17 @@ Other_Entries <- Other_Entries %>%
          Sex = ifelse(Sex=="F","female",Sex),
          Sex = ifelse(Sex=="M","male",Sex),
          Sex = ifelse(Sex=="U","unsexed",Sex))
+
+Other_Entries <- Other_Entries %>%
+  mutate(Sex = ifelse(Sex == 1 & CommonName == "pacific cod", NA, Sex),
+         Sex = ifelse(Sex == 2 & CommonName == "pacific cod", NA, Sex),
+         Sex = ifelse(Sex == 3 & CommonName == "pacific cod", NA, Sex),
+         Sex = ifelse(Sex == 1 & CommonName == "yellowfin sole", "male", Sex),
+         Sex = ifelse(Sex == 2 & CommonName == "yellowfin sole", "female", Sex),
+         Sex = ifelse(Sex == 3 & CommonName == "yellowfin sole", "unsexed", Sex),
+         Sex = ifelse(Sex == 1 & CommonName == "bering flounder", "male", Sex),
+         Sex = ifelse(Sex == 2 & CommonName == "bering flounder", "female", Sex),
+         Sex = ifelse(Sex == 3 & CommonName == "bering flounder", "unsexed", Sex))
   
 Other_Entries %>%
   select(CaptureTime) %>%
@@ -1038,4 +1075,70 @@ Other_Entries <- Other_Entries %>%
   mutate(IdentifiedBy = ifelse(IdentifiedBy=="---",NA,IdentifiedBy))
 ```
 
+any samples there is no sample or dna location info?
+```{r}
+question_entries5 <- Other_Entries %>%
+  filter(is.na(SampleRoom) & is.na(SampleLocation) & is.na(SampleSublocation) & is.na(DNAroom) & is.na(DNAlocation) & is.na(DNAsublocation) & is.na(ExtractionPlate))
+
+question_entries5 %>%
+  count(CommonName, Family, Genus, Species, DonatingLab, Collector, name = "n") %>%
+  arrange(desc(n))
+```
+
+
+
+```{r}
+to_check <- question_entries1 %>% mutate(reason = "no ID") %>%
+  bind_rows(question_entries2 %>% mutate(reason = "no ID")) %>%
+  bind_rows(question_entries3 %>% mutate(reason = "no DonatingLab or Collector")) %>%
+  bind_rows(question_entries4 %>% mutate(reason = "no DonatingLab or Collector"))
+
+#write.csv(to_check, "missing_info.csv")
+```
+
+
+### adding ID/Lab/location information based info from Wes
+
+```{r}
+Other_Entries <- Other_Entries %>%
+  filter(ABLG != 12351) %>%    #blank placeholder entry
+  mutate(Genus = ifelse(ABLG == 31096, "Sebastes", Genus)) %>%
+  mutate(DonatingLab = ifelse(ABLG >= 10208 & ABLG <= 10407, "ADFG", DonatingLab)) %>% 
+  mutate(DonatingLab = ifelse(ABLG >= 38695 & ABLG <= 38753, "Susanne McDermott", DonatingLab)) %>%
+  mutate(DNAroom = ifelse(DonatingLab == "Kim Ledger", "L212", DNAroom),
+         DNAlocation = ifelse(DonatingLab == "Kim Ledger", "F212_1", DNAroom),
+         DonatingLab = ifelse(DonatingLab == "Kim Ledger", "UW_fish_coll", DonatingLab))
+```
+
+
+
+welp, the larval gadids from Johanna that were genetically ID'd never had their info updated in the database.  
+i have that info so will do that here... 
+```{r}
+gadid_2024 <- read.csv("ABL_dat/2024_gadid_for_genetics_w_results.csv") 
+
+pcod_ids <- gadid_2024$ABLG[gadid_2024$Genetic_ID == "Gadus macrocephalus"]
+pollock_ids <- gadid_2024$ABLG[gadid_2024$Genetic_ID == "Gadus chalcogrammus"]
+saf_ids <- gadid_2024$ABLG[gadid_2024$Genetic_ID == "Eleginus gracilis"]
+na_ids <- gadid_2024$ABLG[is.na(gadid_2024$Genetic_ID)]
+
+Other_Entries <- Other_Entries %>%
+  mutate(
+    CommonName = if_else(ABLG %in% pcod_ids, "pacific cod", CommonName),
+    Genus = if_else(ABLG %in% pcod_ids, "Gadus", Genus),
+    Family = if_else(ABLG %in% pcod_ids, "Gadidae", Family),
+    Species = if_else(ABLG %in% pcod_ids, "macrocephalus", Species),
+    CommonName = if_else(ABLG %in% pollock_ids, "walleye pollock", CommonName),
+    Genus = if_else(ABLG %in% pollock_ids, "Gadus", Genus),
+    Family = if_else(ABLG %in% pollock_ids, "Gadidae", Family),
+    Species = if_else(ABLG %in% pollock_ids, "chalcogrammus", Species),
+    CommonName = if_else(ABLG %in% saf_ids, "saffron cod", CommonName),
+    Genus = if_else(ABLG %in% saf_ids, "Eleginus", Genus),
+    Family = if_else(ABLG %in% saf_ids, "Gadidae", Family),
+    Species = if_else(ABLG %in% saf_ids, "gracilis", Species),
+    CommonName = if_else(ABLG %in% na_ids, NA, CommonName),
+    Genus = if_else(ABLG %in% na_ids, NA, Genus),
+    Family = if_else(ABLG %in% na_ids, "Gadidae", Family),
+    Species = if_else(ABLG %in% na_ids, NA, Species))
+```
 
