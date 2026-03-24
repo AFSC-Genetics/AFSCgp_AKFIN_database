@@ -585,6 +585,10 @@ Salmon_Entries %>%
   unlist()%>%
   table
 
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(FishDepthMM = ifelse(FishDepthMM %in% c(T,F),NA,FishDepthMM))
+
+
 Salmon_Entries %>%
   filter(!is.na(FishDepthMM)) %>%
 select(ABLG,AlternateID,CommonName,Genus,Species,CollectionYear,CollectionMonth,CollectionDay,Location1,Location2,FreshwaterWatershed)
@@ -975,7 +979,50 @@ Salmon_Entries <- Salmon_Entries %>%
   relocate(Species,.after='Genus')%>%
   rename('Family' = 'FamilyOLD')
 
-write_delim(x=Salmon_Entries,
+
+```
+
+```{r SplitDonatingLab}
+Salmon_Entries$DonatingLab %>% unique()
+
+Salmon_Entries <- Salmon_Entries %>%
+  mutate(DonatingOrganization = case_when(
+   DonatingLab=="UW-Daniel Schindler" ~ "UW",
+   DonatingLab=="Lorenz Hauser" ~ "UW",
+   DonatingLab %in% c("AFSC-Ingrid Spies","AFSC-Scott Vulstek","AFSC-LPW") ~ "AFSC",
+   DonatingLab %in% c("ADFG - Heather Hoyt","ADFG","ADFG-Anchorage") ~ "ADFG",
+   DonatingLab=="SWFSC" ~ "SWFSC",
+   DonatingLab=="ABL" ~ "AFSC",
+   DonatingLab=="DIPAC-Katie Harms" ~ "DIPAC",
+   DonatingLab=="NMFS-Observer Program" ~ "NMFS Observer Program",
+   DonatingLab=="MCGL-Jared Homola" ~ "MCGL",
+   DonatingLab %in% c("UAF-Anthony Gharrett","UAF" ,"UAF-Andy Seitz" ) ~ "UAF",
+   DonatingLab=="MN-DNR-CGoldsworthy" ~ "MN DNR",
+   DonatingLab=="Cory Dick" ~ "Humboldt State University",#Cory Dick
+   DonatingLab=="Wes Larson" ~ "AFSC", #Wes Larson
+   TRUE ~ DonatingLab))%>%
+   mutate(DonatingContactName = case_when(
+   DonatingLab=="UW-Daniel Schindler" ~ "Daniel Schindler",
+   DonatingLab=="Lorenz Hauser" ~ "Lorenz Hauser",
+   DonatingLab == "AFSC-Ingrid Spies" ~ "Ingrid Spies",
+   DonatingLab == "AFSC-Scott Vulstek" ~ "Scott Vulstek",
+   DonatingLab == "ADFG - Heather Hoyt" ~ "Heather Hoyt",
+   DonatingLab=="DIPAC-Katie Harms" ~ "Katie Harms",
+   DonatingLab=="MCGL-Jared Homola" ~ "Jared Homola",
+   DonatingLab == "UAF-Anthony Gharrett" ~ "Anthony Gharrett",
+   DonatingLab == "UAF-Andy Seitz" ~ "Andy Seitz",
+   DonatingLab=="MN-DNR-CGoldsworthy" ~ "Cory Goldsworthy",
+   DonatingLab=="Cory Dick" ~ "Cory Dick",#Cory Dick
+   DonatingLab=="Wes Larson" ~ "Wes Larson", #Wes Larson
+   TRUE ~ NA))
+
+```
+
+
+```{r WriteOutFile}
+write_delim(x=Salmon_Entries %>%
+              select(-CollectionDate)%>%#remove collection Date
+              select(-DonatingLab), #remove DonatingLab
           file="Salmon_dbEntries_Clean.txt",
           delim="\t")
 
